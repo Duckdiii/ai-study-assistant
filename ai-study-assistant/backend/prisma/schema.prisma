@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  name      String?
+  role      String    @default("user")
+  password  String?
+  createdAt DateTime  @default(now())
+  problems  Problem[]
+  notes     Note[]
+}
+
+model Problem {
+  id          Int       @id @default(autoincrement())
+  title       String
+  content     String
+  subject     String
+  difficulty  String?   @default("medium")
+  isSolved    Boolean   @default(false)
+  owner       User      @relation(fields: [ownerId], references: [id])
+  ownerId     Int
+  notes       Note[]
+  createdAt   DateTime  @default(now())
+}
+
+model Note {
+  id         Int      @id @default(autoincrement())
+  content    String
+  problem    Problem  @relation(fields: [problemId], references: [id])
+  problemId  Int
+  author     User     @relation(fields: [authorId], references: [id])
+  authorId   Int
+  createdAt  DateTime @default(now())
+}
