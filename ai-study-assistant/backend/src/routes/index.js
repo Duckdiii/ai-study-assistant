@@ -1,4 +1,5 @@
 import { Router } from "express";
+import problemsRouter from "./problems.js";
 
 const router = Router();
 
@@ -6,6 +7,7 @@ router.get("/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// TODO: add auth, problems, notes, files, ai, and socket.io event bindings
+// /api/problems
+router.use("/problems", problemsRouter);
 
 export default router;
