@@ -1,0 +1,26 @@
+Context = một “kho dữ liệu chung” cho toàn bộ app
+Thay vì:
+    truyền user từ cha → con → cháu → chắt (props drilling)
+Context cho phép:
+    component nào cũng lấy được dữ liệu
+
+createContext(defaultValue) => Đây là hàm của React dùng để tạo ra một context mới
+Nó tạo ra 2 thứ:
+    Provider → nơi “cấp dữ liệu”
+    Consumer → nơi “đọc dữ liệu” (giờ dùng useContext)
+
+useState(initialValue) => ghi nhớ trạng thái dữ liệu + khi đổi → UI tự re-render
+
+booting: app đang khởi động và CHƯA BIẾT user là ai
+
+
+JWT có cấu trúc như thế nào?
+
+Một JWT trông như vầy:
+
+xxxxx.yyyyy.zzzzz
+
+Phần	Ý nghĩa
+parts[0]	Header
+parts[1]	Payload (thông tin user)
+parts[2]	Signature

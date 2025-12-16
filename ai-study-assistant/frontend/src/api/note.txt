@@ -1,0 +1,85 @@
+src/api = tầng giao tiếp với Backend
++Gửi request HTTP (GET / POST / PUT / DELETE) từ frontend → backend
++Nhận response JSON → trả về cho React component / hook sử dụng
+
+Nguyên tắc quan trọng
+
+Component React KHÔNG gọi axios/fetch trực tiếp
+
+Component chỉ gọi hàm trong api/
+
+Mọi logic liên quan đến URL, headers, token, params → nằm trong api/
+
+src/api/
+│
+├── apiClient.js        # CẤP THẤP NHẤT – cấu hình axios chung
+├── problemsApi.js      # API liên quan Problem (CRUD)
+├── authApi.js          # API login / register / google login
+├── filesApi.js         # API upload / download file
+├── aiApi.js            # API AI (solve, summarize)
+├── analyticsApi.js     # API dashboard / analytics
+├── chatApi.js          # API chat history
+
+----------------------------------------------------------------------------------------------------
+apiClient.js
+
+apiClient.js = trái tim của toàn bộ API layer
+Nó:
+Tạo 1 instance axios dùng chung
+Gắn baseURL
+Tự động gắn JWT accessToken
+Xử lý lỗi tập trung (401, 403, 500…)
+
+localStorage là gì?
+localStorage là một kho lưu trữ nhỏ nằm trong trình duyệt
+Nó dùng để lưu dữ liệu dạng key – value
+Dữ liệu không bị mất khi refresh trang (F5) hoặc tắt tab
+
+Dòng đời của accessToken (quan trọng)
+Bước 1: Login thành công
+
+Backend trả về:
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+
+Frontend làm:
+localStorage.setItem("accessToken", accessToken);
+
+Lúc này trình duyệt lưu:
+key: "accessToken"
+value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+Bước 2: Sau này cần gửi request
+const token = localStorage.getItem("accessToken");
+
+token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+Gắn vào header:
+Authorization: Bearer <token>
+
+config là đối tượng cấu hình của request (do Axios tạo ra)
+Ví dụ một request bình thường:
+apiClient.get("/problems");
+
+Thực tế Axios biến nó thành dạng:
+
+{
+  method: "get",
+  url: "/problems",
+  headers: {
+    // có thể có, có thể chưa
+  }
+}
+
+ config.headers là nơi chứa HTTP headers.
+
+
+
+ Axios response interceptor:
+(res) => res	API thành công (200, 201, …)
+(err) => {}	API lỗi (401, 403, 500, …)
+
+err.response.data.message	=> Backend trả JSON { message: "..." }
+err.message	=> Axios error mặc định
+"Unknown API error" =>	fallback cuối

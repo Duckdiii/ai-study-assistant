@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
-import { mockCreateProblem, mockListProblems } from "../mock/api";
 import {
   Stack,
   Typography,
@@ -17,52 +16,36 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  FormControl,
-  InputLabel,
   Pagination,
+  Alert,
 } from "@mui/material";
+import { createProblem, getProblems } from "../api/problemsApi";
 
 function StatusChip({ status }) {
-  const map = {
-    todo: { label: "Todo" },
-    in_progress: { label: "In progress" },
-    done: { label: "Done" },
-  };
-  return <Chip size="small" variant="outlined" label={map[status]?.label ?? status} />;
+  const label = status || "PENDING";
+  return <Chip size="small" label={label} />;
 }
 
 function ProblemCard({ p }) {
   return (
-    <Card
-      elevation={0}
-      sx={{
-        height: "100%",
-        border: "1px solid",
-        borderColor: "divider",
-        transition: "0.15s",
-        "&:hover": { transform: "translateY(-2px)" },
-      }}
-    >
+    <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
       <CardContent>
         <Stack spacing={1}>
-          <Typography
-            component={RouterLink}
-            to={`/problems/${p.id}`}
-            variant="h6"
-            sx={{ textDecoration: "none", color: "text.primary" }}
-          >
+          <Typography variant="h6" noWrap>
             {p.title}
           </Typography>
-
-          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-            <Chip size="small" label={p.subject} />
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Chip size="small" label={p.subject || "General"} />
             <StatusChip status={p.status} />
-            <Chip size="small" variant="outlined" label={p.difficulty ?? "easy"} />
           </Stack>
-
-          <Typography variant="body2" color="text.secondary">
-            {p.content?.trim() ? p.content : "No description yet."}
+          <Typography variant="body2" color="text.secondary" sx={{ minHeight: 40 }}>
+            {(p.content || "").slice(0, 120)}
           </Typography>
+          <Box>
+            <Button component={RouterLink} to={`/problems/${p.id}`} size="small" variant="outlined">
+              Open
+            </Button>
+          </Box>
         </Stack>
       </CardContent>
     </Card>
@@ -70,197 +53,191 @@ function ProblemCard({ p }) {
 }
 
 export default function ProblemsListPage() {
-  const [search, setSearch] = useState("");
-  const [subject, setSubject] = useState("all");
-  const [status, setStatus] = useState("all");
+  const [q, setQ] = useState(""); // search query
+  const [subject, setSubject] = useState("all"); // filter subject
+  const [status, setStatus] = useState("all");// filter status
+  const [sort, setSort] = useState("createdAt:desc"); // sort order
 
-  const [page, setPage] = useState(1);
-  const limit = 8;
+  const [page, setPage] = useState(1); // current page
+  const pageSize = 8; // items per page
 
-  const [data, setData] = useState({ items: [], total: 0, page: 1, limit });
-  const [loading, setLoading] = useState(false);
+  const [items, setItems] = useState([]); // list of problems
+  const [totalPages, setTotalPages] = useState(1); // total number of pages
+  const [err, setErr] = useState(""); // error message
 
-  // Dialog create
-  const [open, setOpen] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newSubject, setNewSubject] = useState("General");
-  const [newDifficulty, setNewDifficulty] = useState("easy");
+  const [open, setOpen] = useState(false); // new problem dialog open state
+  const [title, setTitle] = useState(""); // new problem title
+  const [content, setContent] = useState(""); // new problem content
+  const [newSubject, setNewSubject] = useState("General"); // new problem subject
 
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(data.total / limit)), [data.total]);
+  const params = useMemo(() => { //giúp ghi nhớ kết quả, Chỉ khi deps thay đổi thì mới tính lại
+    const p = {
+      q: q || undefined,
+      subject: subject === "all" ? undefined : subject,
+      status: status === "all" ? undefined : status,
+      page,
+      pageSize,
+      sort,
+    };
+    return p;
+  }, [q, subject, status, page, pageSize, sort]);
 
   const load = async () => {
-    setLoading(true);
+    setErr("");
     try {
-      const res = await mockListProblems({ search, subject, status, page, limit });
-      setData(res);
-    } finally {
-      setLoading(false);
+      const res = await getProblems(params);
+
+      const data = res.data;
+      if (Array.isArray(data)) {
+        setItems(data);
+        setTotalPages(1);
+        return;
+      }
+
+      setItems(data.items || []);
+      setTotalPages(data.totalPages || Math.ceil((data.total || 0) / pageSize) || 1);
+    } catch (e) {
+      setErr(e?.response?.data?.message || e?.message || "Failed to load problems");
     }
   };
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, subject, status, page]);
-
-  const onOpenCreate = () => {
-    setNewTitle("");
-    setNewSubject(subject === "all" ? "General" : subject);
-    setNewDifficulty("easy");
-    setOpen(true);
-  };
+  }, [params]);
 
   const onCreate = async () => {
-    if (!newTitle.trim()) return;
-    await mockCreateProblem({
-      title: newTitle.trim(),
-      subject: newSubject,
-      difficulty: newDifficulty,
-      content: "",
-    });
-    setOpen(false);
-    setPage(1);
-    load();
+    setErr("");
+    if (!title.trim()) {
+      setErr("Title is required");
+      return;
+    }
+    try {
+      await createProblem({ title: title.trim(), content, subject: newSubject });
+      setOpen(false);
+      setTitle("");
+      setContent("");
+      setNewSubject("General");
+      setPage(1);
+      load();
+    } catch (e) {
+      setErr(e?.response?.data?.message || e?.message || "Create failed");
+    }
   };
 
   return (
     <Stack spacing={2}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
-        <Box>
-          <Typography variant="h5">Problems</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Manage your exercises (demo data from localStorage).
-          </Typography>
-        </Box>
-
-        <Button variant="contained" onClick={onOpenCreate}>
-          + New Problem
+      <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }}>
+        <Typography variant="h5" sx={{ flex: 1 }}>
+          Problems
+        </Typography>
+        <Button variant="contained" onClick={() => setOpen(true)}>
+          New
         </Button>
       </Stack>
 
-      {/* Filters */}
+      {err && <Alert severity="error">{err}</Alert>}
+
       <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
         <CardContent>
           <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={4}>
               <TextField
-                label="Search"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
                 fullWidth
+                label="Search"
+                value={q}
+                onChange={(e) => {
+                  setPage(1);
+                  setQ(e.target.value);
+                }}
               />
             </Grid>
 
-            <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth>
-                <InputLabel>Subject</InputLabel>
-                <Select
-                  label="Subject"
-                  value={subject}
-                  onChange={(e) => {
-                    setSubject(e.target.value);
-                    setPage(1);
-                  }}
-                >
-                  <MenuItem value="all">All</MenuItem>
-                  <MenuItem value="Math">Math</MenuItem>
-                  <MenuItem value="IT">IT</MenuItem>
-                  <MenuItem value="General">General</MenuItem>
-                </Select>
-              </FormControl>
+            <Grid item xs={12} md={3}>
+              <Select
+                fullWidth
+                value={subject}
+                onChange={(e) => {
+                  setPage(1);
+                  setSubject(e.target.value);
+                }}
+              >
+                <MenuItem value="all">All subjects</MenuItem>
+                <MenuItem value="General">General</MenuItem>
+                <MenuItem value="Math">Math</MenuItem>
+                <MenuItem value="Physics">Physics</MenuItem>
+                <MenuItem value="CS">CS</MenuItem>
+              </Select>
             </Grid>
 
-            <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  label="Status"
-                  value={status}
-                  onChange={(e) => {
-                    setStatus(e.target.value);
-                    setPage(1);
-                  }}
-                >
-                  <MenuItem value="all">All</MenuItem>
-                  <MenuItem value="todo">Todo</MenuItem>
-                  <MenuItem value="in_progress">In progress</MenuItem>
-                  <MenuItem value="done">Done</MenuItem>
-                </Select>
-              </FormControl>
+            <Grid item xs={12} md={2}>
+              <Select
+                fullWidth
+                value={status}
+                onChange={(e) => {
+                  setPage(1);
+                  setStatus(e.target.value);
+                }}
+              >
+                <MenuItem value="all">All status</MenuItem>
+                <MenuItem value="PENDING">PENDING</MenuItem>
+                <MenuItem value="SOLVED">SOLVED</MenuItem>
+              </Select>
+            </Grid>
+
+            <Grid item xs={12} md={3}>
+              <Select
+                fullWidth
+                value={sort}
+                onChange={(e) => {
+                  setPage(1);
+                  setSort(e.target.value);
+                }}
+              >
+                <MenuItem value="createdAt:desc">Newest</MenuItem>
+                <MenuItem value="createdAt:asc">Oldest</MenuItem>
+                <MenuItem value="title:asc">Title A→Z</MenuItem>
+                <MenuItem value="title:desc">Title Z→A</MenuItem>
+              </Select>
             </Grid>
           </Grid>
         </CardContent>
       </Card>
 
-      {/* List */}
-      {loading ? (
-        <Typography color="text.secondary">Loading...</Typography>
-      ) : data.items.length === 0 ? (
-        <Typography color="text.secondary">No problems found.</Typography>
-      ) : (
-        <Grid container spacing={2}>
-          {data.items.map((p) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={p.id}>
-              <ProblemCard p={p} />
-            </Grid>
-          ))}
-        </Grid>
-      )}
+      <Grid container spacing={2}>
+        {items.map((p) => (
+          <Grid item key={p.id} xs={12} sm={6} md={3}>
+            <ProblemCard p={p} />
+          </Grid>
+        ))}
+      </Grid>
 
-      {/* Pagination */}
       <Stack direction="row" justifyContent="center" sx={{ py: 1 }}>
-        <Pagination
-          count={totalPages}
-          page={page}
-          onChange={(_, value) => setPage(value)}
-          color="primary"
-        />
+        <Pagination count={totalPages} page={page} onChange={(_, v) => setPage(v)} />
       </Stack>
 
-      {/* Create Dialog */}
       <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>New problem</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ pt: 2 }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField label="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <Select value={newSubject} onChange={(e) => setNewSubject(e.target.value)}>
+              <MenuItem value="General">General</MenuItem>
+              <MenuItem value="Math">Math</MenuItem>
+              <MenuItem value="Physics">Physics</MenuItem>
+              <MenuItem value="CS">CS</MenuItem>
+            </Select>
             <TextField
-              label="Title"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              fullWidth
-              autoFocus
+              label="Content"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              multiline
+              minRows={4}
             />
-
-            <FormControl fullWidth>
-              <InputLabel>Subject</InputLabel>
-              <Select label="Subject" value={newSubject} onChange={(e) => setNewSubject(e.target.value)}>
-                <MenuItem value="Math">Math</MenuItem>
-                <MenuItem value="IT">IT</MenuItem>
-                <MenuItem value="General">General</MenuItem>
-              </Select>
-            </FormControl>
-
-            <FormControl fullWidth>
-              <InputLabel>Difficulty</InputLabel>
-              <Select
-                label="Difficulty"
-                value={newDifficulty}
-                onChange={(e) => setNewDifficulty(e.target.value)}
-              >
-                <MenuItem value="easy">easy</MenuItem>
-                <MenuItem value="medium">medium</MenuItem>
-                <MenuItem value="hard">hard</MenuItem>
-              </Select>
-            </FormControl>
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpen(false)} color="inherit">
-            Cancel
-          </Button>
-          <Button onClick={onCreate} variant="contained">
+          <Button onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={onCreate}>
             Create
           </Button>
         </DialogActions>

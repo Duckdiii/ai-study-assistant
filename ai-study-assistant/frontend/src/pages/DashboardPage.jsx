@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { loadDB } from "../mock/db";
-import { Grid, Card, CardContent, Typography, Stack } from "@mui/material";
+import { Grid, Card, CardContent, Typography, Stack, Alert } from "@mui/material";
+import { useAuth } from "../hooks/useAuth";
+import { analyticsMe, analyticsOverview } from "../api/problemsApi";
 
 function StatCard({ title, value, subtitle }) {
   return (
@@ -23,47 +24,70 @@ function StatCard({ title, value, subtitle }) {
 }
 
 export default function DashboardPage() {
-  const [problems, setProblems] = useState([]);
+  const { user } = useAuth();
+  const [data, setData] = useState(null);
+  const [overview, setOverview] = useState(null);
+  const [err, setErr] = useState("");
 
   useEffect(() => {
-    const db = loadDB();
-    setProblems(db.problems ?? []);
-  }, []);
+    setErr("");
+    analyticsMe()
+      .then((res) => setData(res.data))
+      .catch((e) => setErr(e?.response?.data?.message || e?.message || "Failed to load analytics"));
+
+    if (user?.role === "ADMIN") {
+      analyticsOverview()
+        .then((res) => setOverview(res.data))
+        .catch(() => {});
+    }
+  }, [user?.role]);
 
   const stats = useMemo(() => {
-    const total = problems.length;
-    const done = problems.filter((p) => p.status === "done").length;
-    const inProgress = problems.filter((p) => p.status === "in_progress").length;
-    const todo = problems.filter((p) => p.status === "todo").length;
-
-    const freq = {};
-    for (const p of problems) freq[p.subject] = (freq[p.subject] || 0) + 1;
-    const topSubject = Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "N/A";
-
-    return { total, done, inProgress, todo, topSubject };
-  }, [problems]);
+    const src = data || {};
+    return {
+      totalProblems: src.totalProblems ?? "-",
+      solvedCount: src.solvedCount ?? "-",
+      pendingCount: src.pendingCount ?? "-",
+      aiCallsLast7Days: src.aiCallsLast7Days ?? "-",
+    };
+  }, [data]);
 
   return (
     <Stack spacing={2}>
       <Typography variant="h5">Dashboard</Typography>
       <Typography variant="body2" color="text.secondary">
-        Overview of your study progress (demo from localStorage).
+        Analytics cho user đang đăng nhập{user?.role === "ADMIN" ? " (có thêm overview cho admin)" : ""}.
       </Typography>
+
+      {err && <Alert severity="error">{err}</Alert>}
 
       <Grid container spacing={2}>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard title="Total problems" value={stats.total} />
+          <StatCard title="Total problems" value={stats.totalProblems} />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard title="Done" value={stats.done} subtitle="Completed tasks" />
+          <StatCard title="Solved" value={stats.solvedCount} />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard title="In progress" value={stats.inProgress} />
+          <StatCard title="Pending" value={stats.pendingCount} />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <StatCard title="Top subject" value={stats.topSubject} />
+          <StatCard title="AI calls (7 days)" value={stats.aiCallsLast7Days} />
         </Grid>
       </Grid>
+
+      {user?.role === "ADMIN" && overview && (
+        <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
+          <CardContent>
+            <Typography variant="subtitle1">Admin overview</Typography>
+
+            <Typography variant="body2" color="text.secondary">
+              Total: {overview.totalProblems} | Solved: {overview.solvedCount} | Pending:{" "}
+              {overview.pendingCount} | AI calls 7 days: {overview.aiCallsLast7Days}
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
     </Stack>
   );
 }

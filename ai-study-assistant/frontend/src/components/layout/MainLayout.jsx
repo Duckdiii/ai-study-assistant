@@ -1,61 +1,76 @@
-import { Link as RouterLink, useNavigate } from "react-router-dom";
-import { useAuth } from "../../hooks/useAuth";
-import {
-  AppBar,
-  Toolbar,
-  Typography,
-  Button,
-  Box,
-  Container,
-  Chip,
-  Stack,
-} from "@mui/material";
+import React from "react";
+import { Link, useNavigate } from "react-router-dom";
+import AppBar from "@mui/material/AppBar"; //Thanh menu
+import Toolbar from "@mui/material/Toolbar"; //vùng chứa nút
+import Typography from "@mui/material/Typography";
+import Button from "@mui/material/Button";
+import Container from "@mui/material/Container";
+import Box from "@mui/material/Box";
+import Chip from "@mui/material/Chip"; //badge nhỏ (role)
 
-export default function MainLayout({ children }) {
+// ✅ FIX: từ src/components/layout/MainLayout.jsx -> src/hooks/useAuth.jsx
+import { useAuth } from "../../hooks/useAuth"; //custom hook lấy user hiện tại + hàm logout
+
+export default function MainLayout({ children }) { // children chính là nội dung page con => vd: DashboardPage, ProblemsPage, ...
   const { user, logout } = useAuth();
-  const nav = useNavigate();
+  const navigate = useNavigate(); //chuyển trang
 
-  const onLogout = async () => {
-    await logout();
-    nav("/login");
+  const handleLogout = () => { // khi user logout => sẽ điều hướng về trang login
+    logout();
+    navigate("/login");
   };
 
+  const isAdmin = user?.role === "ADMIN";
+
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
-      <AppBar position="sticky" elevation={0} sx={{ borderBottom: "1px solid", borderColor: "divider" }}>
-        <Toolbar sx={{ gap: 2 }}>
-          <Typography
-            component={RouterLink}
-            to="/dashboard"
-            variant="h6"
-            sx={{ textDecoration: "none", color: "inherit", fontWeight: 800 }}
-          >
+    <>
+      <AppBar position="static">
+        <Toolbar>
+          <Typography variant="h6" sx={{ flexGrow: 1 }}>
             AI Study Assistant
           </Typography>
 
-          <Button component={RouterLink} to="/dashboard" color="inherit">
+          {/* Nav links */}
+          <Button color="inherit" component={Link} to="/dashboard">
             Dashboard
           </Button>
-          <Button component={RouterLink} to="/problems" color="inherit">
+
+          <Button color="inherit" component={Link} to="/problems">
             Problems
           </Button>
 
-          <Box sx={{ flex: 1 }} />
+          {/* ✅ Role-based menu (admin only) */}
+          {isAdmin && (
+            <Button color="inherit" component={Link} to="/analytics/overview">
+              Analytics
+            </Button>
+          )}
 
-          {user && (
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Chip label={user.email} variant="outlined" />
-              <Button variant="contained" onClick={onLogout}>
+          {/* Right side */}
+          {user ? ( //khi đã đăng nhập: show email + role + logout
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, ml: 2 }}>
+              {/*show role for demo */}
+              <Chip
+                size="small"
+                label={user.role || "USER"}
+                variant="outlined"
+                sx={{ color: "white", borderColor: "rgba(255,255,255,0.6)" }}
+              />
+              <Typography variant="body2">{user.email}</Typography>
+              <Button color="inherit" onClick={handleLogout}>
                 Logout
               </Button>
-            </Stack>
+            </Box>
+          ) : (
+            //khi chưa đăng nhập: show nút login
+            <Button color="inherit" component={Link} to="/login" sx={{ ml: 2 }}>
+              Login
+            </Button>
           )}
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        {children}
-      </Container>
-    </Box>
+      <Container sx={{ mt: 3 }}>{children}</Container>
+    </>
   );
 }

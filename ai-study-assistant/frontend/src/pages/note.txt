@@ -1,0 +1,17 @@
+new URLSearchParams(loc.search)
+const params = new URLSearchParams(loc.search);
+
+loc.search là gì?
+Ví dụ URL:
+/login?token=eyJhbGciOi...
+
+
+Thì:
+loc.search === "?token=eyJhbGciOi..."
+
+URLSearchParams dùng để làm gì?
+👉 Tách query string thành từng key-value
+
+Ví dụ:
+params.get("token") // "eyJhbGciOi..."
+
