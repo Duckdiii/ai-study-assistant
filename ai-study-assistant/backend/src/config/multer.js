@@ -2,7 +2,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-// Thư mục lưu file
+// Thư mục lưu file => xác định thư mục lưu file
 const uploadDir = path.join(process.cwd(), "uploads");
 
 // Tạo folder nếu chưa có

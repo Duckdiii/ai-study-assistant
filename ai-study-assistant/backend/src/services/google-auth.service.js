@@ -41,7 +41,6 @@ async function exchangeCodeForTokens(code) {
 
     return res.json(); // { access_token, id_token, ... }
 }
-
 // findOrCreate user dựa trên Google account
 export async function handleGoogleLogin(code) {
     // 1. Đổi code -> access token

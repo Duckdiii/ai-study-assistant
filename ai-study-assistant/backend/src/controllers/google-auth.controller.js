@@ -2,10 +2,10 @@ import { handleGoogleLogin } from "../services/google-auth.service.js";
 
 export function googleAuthStart(req, res) {
     const params = new URLSearchParams({
-        client_id: process.env.GOOGLE_CLIENT_ID,
-        redirect_uri: process.env.GOOGLE_REDIRECT_URI,
-        response_type: "code",
-        scope: "openid email profile",
+        client_id: process.env.GOOGLE_CLIENT_ID, // ID app của bạn trên Google Cloud
+        redirect_uri: process.env.GOOGLE_REDIRECT_URI, // URL callback đã đăng ký
+        response_type: "code", // Yêu cầu mã ủy quyền
+        scope: "openid email profile", 
         access_type: "offline",
         prompt: "consent",
     });

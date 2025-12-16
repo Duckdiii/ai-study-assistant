@@ -1,11 +1,13 @@
 import jwt from "jsonwebtoken";
 import { loginLimiter } from "../middleware/rateLimit.js";
+import { Router } from "express";
+import { register, login } from "../controllers/auth.controller.js";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const router = Router();
 
 router.post("/register", register);
-router.post("/login", loginLimiter, login); // 👈 thêm limiter vào login
+router.post("/login", loginLimiter, login);
 
 export function authMiddleware(req, res, next) {
     const authHeader = req.headers.authorization;

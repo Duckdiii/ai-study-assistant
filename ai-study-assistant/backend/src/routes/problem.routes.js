@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware.js";
+import { listNotesHandler, addNoteHandler } from "../controllers/note.controller.js";
 import {
     createProblemHandler,
     listProblemsHandler,
@@ -25,4 +26,8 @@ router.post(
     upload.array("files", 10),   // field name = "files", max 10 file
     uploadFilesHandler
 );
+
+router.get("/:id/notes", authMiddleware, listNotesHandler);
+router.post("/:id/notes", authMiddleware, addNoteHandler);
+
 export default router;

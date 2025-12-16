@@ -87,7 +87,7 @@ model Note {
 
   problem   Problem @relation(fields: [problemId], references: [id])
   problemId Int
-
+,
   author   User @relation(fields: [authorId], references: [id])
   authorId Int
 

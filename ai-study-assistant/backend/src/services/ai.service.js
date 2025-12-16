@@ -1,8 +1,10 @@
 import prisma from "../config/prisma.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import dotenv from "dotenv";
 
+dotenv.config();
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const MODEL_NAME = "gemini-1.5-flash"; // hoặc model khác nếu bạn muốn
+const MODEL_NAME = "gemini-2.5-flash"; // hoặc model khác nếu bạn muốn
 
 // Hàm call Gemini chung
 async function callGemini(prompt) {
@@ -15,33 +17,28 @@ async function callGemini(prompt) {
 
 // Giải bài tập (bằng problemId trong DB hoặc text trực tiếp)
 export async function solveProblem({ userId, problemId, text }) {
-    let problemText = text;
+    const userPrompt = text?.trim();
+    let problemContext = "";
 
-    // Nếu có problemId -> lấy nội dung từ DB
     if (problemId) {
-        const problem = await prisma.problem.findUnique({
-            where: { id: Number(problemId) },
-        });
-        if (!problem) {
-            throw new Error("PROBLEM_NOT_FOUND");
-        }
-        problemText = `${problem.title}\n\n${problem.content}`;
+        const problem = await prisma.problem.findUnique({ where: { id: Number(problemId) } });
+        if (!problem) throw new Error("PROBLEM_NOT_FOUND");
+        problemContext = `${problem.title}\n\n${problem.content}`;
     }
 
-    if (!problemText) {
-        throw new Error("NO_TEXT");
-    }
+    if (!userPrompt && !problemContext) throw new Error("NO_TEXT");
 
     const prompt = `
-You are an AI study assistant. Solve the following problem step by step, explain clearly.
+You are an AI study assistant. If a user request is given, answer it directly; use the problem context only as background.
 
-Problem:
-${problemText}
+Problem context:
+${problemContext || "(none)"}
+
+User request:
+${userPrompt || "Solve the problem context step by step, explain clearly."}
 `;
 
     const answer = await callGemini(prompt);
-
-    // Lưu log vào DB
     const log = await prisma.aiInteraction.create({
         data: {
             type: "SOLVE",

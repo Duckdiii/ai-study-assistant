@@ -63,12 +63,28 @@ export async function listProblems(user, query) {
         where.status = status;
     }
 
+    function parseSort(sort) {
+        // sort ví dụ: "createdAt:desc" hoặc "title:asc"
+        if (!sort) return { createdAt: "desc" };
+
+        const [field, dir] = String(sort).split(":");
+
+        // whitelist field để tránh lỗi + tránh user truyền bậy
+        const safeField = ["createdAt", "title", "status", "subject"].includes(field)
+            ? field
+            : "createdAt";
+
+        const safeDir = dir === "asc" ? "asc" : "desc";
+
+        return { [safeField]: safeDir };
+    }
+    const orderBy = parseSort(sort);
     const [items, total] = await Promise.all([
         prisma.problem.findMany({
             where,
             skip: (pageNum - 1) * sizeNum,
             take: sizeNum,
-            orderBy: { [sort]: order },
+            orderBy
         }),
         prisma.problem.count({ where }),
     ]);

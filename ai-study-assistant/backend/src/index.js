@@ -16,7 +16,6 @@ import jwt from "jsonwebtoken";
 import prisma from "./config/prisma.js";
 
 import helmet from "helmet";
-import cors from "cors";
 import { requestLogger } from "./middleware/requestLogger.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 

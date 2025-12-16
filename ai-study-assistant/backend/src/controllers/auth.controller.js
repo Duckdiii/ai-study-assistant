@@ -1,5 +1,17 @@
 import { loginUser, registerUser } from "../services/auth.service.js";
 
+export async function authMeHandler(req, res) {
+    // authMiddleware đã verify JWT và gán req.user
+    return res.json({
+        user: {
+            id: req.user.id,
+            email: req.user.email,
+            name: req.user.name,
+            role: req.user.role,
+        },
+    });
+}
+
 export async function register(req, res) {
     try {
         const { email, password, name } = req.body;
