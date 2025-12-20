@@ -4,6 +4,8 @@ import LoginPage from "../pages/LoginPage";
 import DashboardPage from "../pages/DashboardPage";
 import ProblemsListPage from "../pages/ProblemsListPage";
 import ProblemDetailPage from "../pages/ProblemDetailPage";
+import ChatPage from "../pages/ChatPage";
+import AdminUsersPage from "../pages/AdminUsersPage";
 import MainLayout from "../components/layout/MainLayout";
 import RequireAuth from "./RequireAuth"; //Route bảo vệ, chỉ cho phép user đã login đi tiếp
 
@@ -50,7 +52,26 @@ export default function AppRouter() { //AppRouter là bản đồ điều hướ
           </RequireAuth>
         }
       />
-
+      <Route
+        path="/chat"
+        element={
+          <RequireAuth>
+            <MainLayout>
+              <ChatPage />
+            </MainLayout>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/admin/users"
+        element={
+          <RequireAuth>
+            <MainLayout>
+              <AdminUsersPage />
+            </MainLayout>
+          </RequireAuth>
+        }
+      />
       {/* Fallback */}
       <Route path="*" element={<LandingPage />} />
     </Routes>

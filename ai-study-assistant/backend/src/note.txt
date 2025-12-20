@@ -1,0 +1,90 @@
+I. CORS
+app.use(cors()); cho phép các trang web ở tên miền khác (hoặc cổng khác) được phép gọi API và lấy dữ liệu từ Server của bạn
+1. Vấn đề: "Luật biên giới" của trình duyệt (Same-Origin Policy)
+Mặc định, các trình duyệt (Chrome, Edge...) có một luật bảo mật rất gắt gao:
+
+Nếu trang web của bạn đang chạy ở http://localhost:3000 (Frontend React).
+
+Mà nó lại cố gửi yêu cầu lấy dữ liệu từ http://localhost:4000 (Backend Node.js).
+
+👉 Trình duyệt sẽ thấy hai "địa chỉ" này khác nhau (khác cổng 3000 và 4000) 
+=> Nó coi là người lạ và CHẶN NGAY LẬP TỨC. Bạn sẽ thấy lỗi đỏ lòm trong Console: 
+"Access to fetch at... has been blocked by CORS policy".
+
+2. Giải pháp: app.use(cors());
+CORS viết tắt của Cross-Origin Resource Sharing (Chia sẻ tài nguyên chéo nguồn).
+
+Khi bạn thêm dòng app.use(cors()); vào Server Express:
+
+Nó sẽ tự động thêm một số "Header" đặc biệt vào phản hồi (Response) của Server.
+
+Quan trọng nhất là header: Access-Control-Allow-Origin: *.
+
+Header này nói với trình duyệt rằng: "Server này thoải mái lắm, ai gọi vào cũng được, đừng chặn nhé!".
+3. Phân tích cú pháp
+app: Là ứng dụng Express của bạn.
+
+.use(): Là hàm để kích hoạt một Middleware (phần mềm trung gian). Nó bảo Express: "Hãy chạy đoạn code này cho MỌI yêu cầu gửi đến server".
+
+cors(): Là hàm từ thư viện cors bạn đã cài (npm install cors). Nó thực hiện các việc kỹ thuật phức tạp (gắn header) giúp bạn.
+
+
+II. app.use(helmet()); đóng vai trò như việc đội mũ bảo hiểm cho ứng dụng
+Đây là một lớp khiên chắn giúp BẢO MẬT (Security) ứng dụng Express bằng cách tự động thiết lập các HTTP Headers (tiêu đề HTTP) an toàn.
+1. Vấn đề: Server mặc định rất "ngây thơ"
+Khi bạn chạy một server Express bình thường mà không có helmet, server sẽ rất "thật thà". Nó sẽ gửi kèm các thông tin có thể gây hại cho chính nó trong phần Header của phản hồi.
+
+Ví dụ: Mặc định, Express sẽ gửi kèm dòng này về cho trình duyệt: X-Powered-By: Express
+
+👉 Tại sao nguy hiểm? Hacker nhìn thấy dòng này sẽ biết ngay: "À, server này viết bằng Express (Node.js)". Từ đó, hắn sẽ lục lại xem Express có lỗi bảo mật nào đã biết không để tấn công vào đúng điểm yếu đó.
+
+2. Giải pháp: Helmet làm gì?
+Khi bạn gọi app.use(helmet());, nó thực chất là một bộ sưu tập gồm hơn 10 cái middleware con. Nó sẽ âm thầm làm 2 việc:
+
+Xóa các Header nguy hiểm:
+
+Nó xóa ngay dòng X-Powered-By: Express. (Giấu nghề, không cho hacker biết mình dùng công nghệ gì).
+
+Thêm các Header bảo vệ:
+
+Nó thêm các dòng luật lệ nghiêm ngặt để chỉ đạo trình duyệt của người dùng (Chrome, Firefox...) phải cư xử an toàn hơn.
+
+3. Một số công dụng cụ thể (Dễ hiểu)
+Dưới đây là vài thứ cụ thể mà Helmet giúp bạn ngăn chặn:
+
+Chống Clickjacking (Tấn công chiếm đoạt chuột):
+
+Tình huống: Hacker tạo một trang web giả, nhúng trang web của bạn vào một cái khung trong suốt (<iframe>) đè lên trên. Khi người dùng tưởng là đang bấm nút "Nhận thưởng" của hacker, thực ra là đang bấm nút "Chuyển tiền" trên web của bạn.
+
+Helmet: Nó thêm header X-Frame-Options: SAMEORIGIN. Trình duyệt thấy dòng này sẽ CẤM bất kỳ ai nhúng trang web của bạn vào iframe, trừ chính bạn.
+
+Chống XSS (Một phần):
+
+Nó thêm các header giúp trình duyệt phát hiện và chặn các đoạn script độc hại cơ bản.
+
+Ép buộc dùng HTTPS (HSTS):
+
+Nó bảo trình duyệt: "Lần sau truy cập trang này thì nhớ dùng HTTPS nhé, cấm dùng HTTP thường".
+
+
+III. const httpServer = http.createServer(app);
+http là module gốc của Node.js để tạo HTTP server.
+app (từ Express) là một hàm xử lý request (handler).
+Khi gọi http.createServer(app), bạn đang nói:
+“Tạo một server HTTP, và khi có request đến thì giao cho app xử lý.”
+
+
+IV. JWT_SECRET
+Server có sẵn JWT_SECRET (đặt trong .env).
+Đây là “chìa khóa” bí mật chỉ server biết.
+
+Khi user login:
+Server tạo JWT = payload + signature.
+Signature được ký bằng JWT_SECRET.
+
+Client nhận JWT và gửi lại trong các request sau (Authorization: Bearer …).
+
+Mỗi request:
+Server dùng cùng JWT_SECRET để verify chữ ký.
+Nếu đúng → token hợp lệ. Nếu sai → 401.
+=>node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"

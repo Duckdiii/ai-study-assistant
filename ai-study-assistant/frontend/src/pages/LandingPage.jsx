@@ -36,6 +36,9 @@ export default function LandingPage() {
               <Button component={RouterLink} to="/problems" variant="outlined">
                 View problems
               </Button>
+              <Button component={RouterLink} to="/chat" variant="outlined">
+                Realtime chat
+              </Button>
               <Button component={RouterLink} to="/dashboard" variant="outlined">
                 Dashboard
               </Button>

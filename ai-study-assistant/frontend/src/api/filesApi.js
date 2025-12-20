@@ -1,14 +1,14 @@
 import apiClient from "./apiClient";
-//Gửi file mà user chọn (ảnh, pdf, doc, …) lên backend
-//Gắn file đó vào 1 Problem cụ thể
+
+//Gửi nhiều file lên backend và gắn vào một problem:
 export const uploadProblemFiles = (problemId, fileList) => {
     const form = new FormData(); //FormData là kiểu dữ liệu đặc biệt của browser => dùng để gửi file
     for (const f of fileList) { //fileList là gồm các file user upload
-        form.append("files", f)
+        form.append("files", f) //append("key", value)
     };
 
     return apiClient.post(`/problems/${problemId}/files`, form, {
-        headers: { "Content-Type": "multipart/form-data" }, //Tôi không gửi JSON, tôi đang gửi form + file
+        headers: { "Content-Type": "multipart/form-data" }, //đang gửi form + file
     });
 };
 

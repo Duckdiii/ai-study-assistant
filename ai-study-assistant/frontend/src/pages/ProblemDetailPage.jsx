@@ -36,25 +36,25 @@ function saveBlob(blob, filename = "download") { // Biến dữ liệu file (Blo
 }
 
 export default function ProblemDetailPage() {
-  const { id } = useParams(); //lấy problemId từ URL
+  const { id } = useParams(); //Lấy id từ URL theo route kiểu /problems/:id
 
-  const [p, setP] = useState(null); //thông tin bài toán (Problem)
-  const [notes, setNotes] = useState([]); //ghi chú của user cho bài này
-  const [files, setFiles] = useState([]); //danh sách file đính kèm
+  const [p, setP] = useState(null); //Lưu thông tin chi tiết của problem (bài toán)
+  const [notes, setNotes] = useState([]); //Danh sách ghi chú của user cho problem này
+  const [files, setFiles] = useState([]); //Danh sách file đính kèm
 
-  const [note, setNote] = useState(""); //nội dung note đang nhập
-  const [ask, setAsk] = useState(""); //câu hỏi gửi AI
+  const [note, setNote] = useState(""); //Nội dung note đang gõ trong form
+  const [ask, setAsk] = useState(""); //Câu hỏi user đang gõ để gửi AI
   const [aiAnswer, setAiAnswer] = useState(""); //câu trả lời từ AI
 
-  const [sumText, setSumText] = useState("");
-  const [summary, setSummary] = useState("");
-  const [sumBusy, setSumBusy] = useState(false);
+  const [sumText, setSumText] = useState("");//Dữ liệu đầu vào để tóm tắt (summary)
+  const [summary, setSummary] = useState("");// Kết quả tóm tắt
+  const [sumBusy, setSumBusy] = useState(false); //Đang chờ API tóm tắt hay không
 
-  const [err, setErr] = useState(""); //lỗi chung
-  const [busy, setBusy] = useState(false); //trạng thái chờ (gọi API)
+  const [err, setErr] = useState(""); //Lỗi chung để hiển thị message
+  const [busy, setBusy] = useState(false); //Trạng thái đang gọi API (loading chung)
 
-  const load = async () => { //trách nhiệm LOAD TOÀN BỘ dữ liệu cho trang ProblemDetailPage: Thông tin bài toán + notes + files
-    setErr("");
+  const load = async () => { //dùng để lấy toàn bộ dữ liệu cho trang chi tiết bài toán
+    setErr(""); //reset lỗi trước khi gọi API
     try {
       const res = await getProblemById(id);
       const data = res.data?.problem ?? res.data;
@@ -64,8 +64,7 @@ export default function ProblemDetailPage() {
       const nres = await getNotes(id);
       setNotes(nres.data?.items ?? nres.data ?? []);
 
-      // files: tùy backend trả ở problem hoặc endpoint khác
-      setFiles(data?.files ?? []);
+      setFiles(data?.files ?? []); //Files được lấy trực tiếp từ data.files (nếu có)
     } catch (e) {
       setErr(e?.response?.data?.message || e?.message || "Failed to load problem");
     }
@@ -77,6 +76,7 @@ export default function ProblemDetailPage() {
 
   const statusLabel = useMemo(() => p?.status || "PENDING", [p?.status]);
 
+  // Thêm note mới vào problem
   const onAddNote = async () => { //Hàm này chạy khi user bấm nút “Add note”
     setErr("");
     if (!note.trim()) return;
@@ -89,6 +89,7 @@ export default function ProblemDetailPage() {
     }
   };
 
+  // Gửi problem lên AI để giải quyết
   const onSolve = async () => { //Chạy khi user bấm nút “Solve with AI”
     setErr("");
     setBusy(true); //Khóa UI (loading)
@@ -104,25 +105,28 @@ export default function ProblemDetailPage() {
       setBusy(false);
     }
   };
+
+  // ghép nhiều mảnh dữ liệu (title/content/notes) thành 1 đoạn text chuẩn để gửi cho tính năng tóm tắt/AI.
   const buildDefaultSummarizeText = () => {
-    const parts = [];
-    if (p?.title) parts.push(`Title: ${p.title}`);
-    if (p?.content) parts.push(`Content:\n${p.content}`);
+    const parts = []; // để gom từng khối nội dung
+    if (p?.title) parts.push(`Title: ${p.title}`); // thêm khối Title
+    if (p?.content) parts.push(`Content:\n${p.content}`); //thêm khối Content
     if (Array.isArray(notes) && notes.length) {
       parts.push(
         "Notes:\n" +
         notes.map((n, i) => `- (${i + 1}) ${n.content ?? ""}`).join("\n")
       );
     }
-    return parts.join("\n\n").trim();
+    return parts.join("\n\n").trim(); //ghép các khối bằng một dòng trống giữa chúng
   };
 
+  // Xử lý tóm tắt nội dung
   const onSummarize = async () => {
-    setErr("");
-    setSummary("");
-    setSumBusy(true);
+    setErr(""); // Xóa lỗi cũ (nếu có)
+    setSummary(""); // Xóa kết quả tóm tắt cũ
+    setSumBusy(true); // Đánh dấu đang chờ tóm tắt
     try {
-      const textToSummarize = (sumText || buildDefaultSummarizeText()).trim();
+      const textToSummarize = (sumText || buildDefaultSummarizeText()).trim(); //Nếu user đã nhập sumText thì dùng; nếu chưa thì tự build từ title/content/notes.
       if (!textToSummarize) {
         setErr("Không có nội dung để summarize.");
         return;
@@ -132,7 +136,7 @@ export default function ProblemDetailPage() {
 
       const out =
         res.data?.summary ?? res.data?.result ?? res.data?.answer ?? res.data;
-      setSummary(out ? String(out) : "");
+      setSummary(out ? String(out) : ""); //Hiển thị kết quả tóm tắt
     } catch (e) {
       setErr(e?.response?.data?.message || e?.message || "Summarize failed");
     } finally {
@@ -140,33 +144,33 @@ export default function ProblemDetailPage() {
     }
   };
 
-  const onUpload = async (e) => { //Chạy khi user chọn file để upload
+  // Xử lý upload file
+  const onUpload = async (e) => { 
     setErr(""); //Xóa lỗi cũ (nếu có)
-    const fl = e.target.files; //các file user vừa chọn
+    const fl = e.target.files; //lấy danh sách file từ input
     if (!fl || fl.length === 0) return;
 
-    setBusy(true);
+    setBusy(true); //bật loading
     try {
       const res = await uploadProblemFiles(id, fl);
-      const uploaded = res.data?.files ?? res.data ?? [];
-      setFiles((prev) => [...prev, ...uploaded]);
-      //prev = file cũ
-      //uploaded = file mới
-      //Gộp lại → không mất file đã upload trước đó
+      const uploaded = res.data?.files ?? res.data ?? []; //lấy danh sách file trả về
+      setFiles((prev) => [...prev, ...uploaded]); //cập nhật danh sách file hiện có
+
     } catch (e2) {
       setErr(e2?.response?.data?.message || e2?.message || "Upload failed");
     } finally {
       setBusy(false);
-      e.target.value = ""; //Reset input file
+      e.target.value = ""; //reset input file để lần sau chọn lại
     }
   };
 
+  // Xử lý download file
   const onDownload = async (file) => {
-    setErr("");
-    setBusy(true);
+    setErr(""); //xóa lỗi cũ
+    setBusy(true); // bật trạng thái loading
     try {
       const res = await downloadFile(file.id);
-      saveBlob(res.data, file.filename || "file");
+      saveBlob(res.data, file.filename || "file"); //lưu dữ liệu blob xuống máy, dùng tên file nếu có
     } catch (e) {
       setErr(e?.response?.data?.message || e?.message || "Download failed");
     } finally {
@@ -174,12 +178,13 @@ export default function ProblemDetailPage() {
     }
   };
 
+  // Đánh dấu bài toán là đã giải quyết (SOLVED)
   const onMarkSolved = async () => {
     setErr("");
     setBusy(true);
     try {
       await updateProblem(id, { status: "SOLVED" });
-      await load();
+      await load(); //reload lại dữ liệu chi tiết để UI cập nhật
     } catch (e) {
       setErr(e?.response?.data?.message || e?.message || "Update status failed");
     } finally {

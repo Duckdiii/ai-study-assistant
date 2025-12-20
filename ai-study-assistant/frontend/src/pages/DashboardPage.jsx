@@ -24,25 +24,25 @@ function StatCard({ title, value, subtitle }) {
 }
 
 export default function DashboardPage() {
-  const { user } = useAuth();
-  const [data, setData] = useState(null);
-  const [overview, setOverview] = useState(null);
-  const [err, setErr] = useState("");
+  const { user } = useAuth(); //Lấy thông tin người dùng hiện tại
+  const [data, setData] = useState(null); //Lưu dữ liệu analytics cho user hiện tại
+  const [overview, setOverview] = useState(null); //Lưu dữ liệu tổng quan cho admin
+  const [err, setErr] = useState(""); //Lưu lỗi khi load dữ liệu analytics
 
   useEffect(() => {
-    setErr("");
-    analyticsMe()
-      .then((res) => setData(res.data))
-      .catch((e) => setErr(e?.response?.data?.message || e?.message || "Failed to load analytics"));
+    setErr(""); // reset lỗi
+    analyticsMe()// gọi API lấy thống kê của người dùng hiện tại
+      .then((res) => setData(res.data)) //nếu thành công, lưu dữ liệu vào state data
+      .catch((e) => setErr(e?.response?.data?.message || e?.message || "Failed to load analytics")); //nếu lỗi, lưu thông báo lỗi vào state err
 
     if (user?.role === "ADMIN") {
-      analyticsOverview()
+      analyticsOverview() 
         .then((res) => setOverview(res.data))
         .catch(() => {});
     }
   }, [user?.role]);
 
-  const stats = useMemo(() => {
+  const stats = useMemo(() => { //useMemo là hook để ghi nhớ (memoize) giá trị tính toán giữa các lần render. - chỉ tính lại khi data đổi
     const src = data || {};
     return {
       totalProblems: src.totalProblems ?? "-",

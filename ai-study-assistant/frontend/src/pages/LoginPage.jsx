@@ -14,21 +14,20 @@ import {
 } from "@mui/material";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("demo@example.com");
+  const [email, setEmail] = useState("demo@example.com"); //State cho email trong form login, mặc định gán sẵn
   const [password, setPassword] = useState("123456");
-  const [err, setErr] = useState("");
+  const [err, setErr] = useState(""); //Lưu lỗi hiển thị khi login thất bại.
 
-  const { login, startGoogleLogin, completeOAuthLogin } = useAuth();
-  const nav = useNavigate(); //chuyển trang mà ko cần reload
-  const loc = useLocation(); //Trả về thông tin URL hiện tại
+  const { login, startGoogleLogin, completeOAuthLogin } = useAuth(); //Lấy các hàm auth từ custom hook
+  const nav = useNavigate(); //Hàm điều hướng trang sau khi login.
+  const loc = useLocation(); //Lấy thông tin location hiện tại (dùng để redirect sau khi login).
 
-  // Nếu backend redirect về frontend kèm token: /login?token=xxx hoặc /oauth-success?token=xxx
   useEffect(() => {
-    const params = new URLSearchParams(loc.search);
-    const token = params.get("token");
+    const params = new URLSearchParams(loc.search); //Lấy query string từ URL
+    const token = params.get("token"); //Lấy token từ query string
     if (!token) return;
 
-    completeOAuthLogin(token)
+    completeOAuthLogin(token) //Nếu có token trong URL (OAuth redirect về), gọi hàm hoàn tất login OAuth
       .then(() => nav("/dashboard"))
       .catch((e) => setErr(e?.message || "OAuth login failed"));
   }, [loc.search]);//Mỗi lần URL query string thay đổi → chạy lại đoạn code này

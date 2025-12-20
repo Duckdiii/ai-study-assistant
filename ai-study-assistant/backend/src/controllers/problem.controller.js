@@ -8,8 +8,22 @@ import {
 
 export async function createProblemHandler(req, res) {
     try {
+        const io = req.app.get("io");
         const userId = req.user.id;
         const problem = await createProblem(userId, req.body);
+
+        if (io) {
+            io.to(`user:${req.user.id}`).emit("notification:newProblem", {
+                problemId: problem.id,
+                title: problem.title,
+            });
+
+            io.to("role:ADMIN").emit("notification:newProblem", {
+                problemId: problem.id,
+                title: problem.title,
+            });
+        }
+
         res.status(201).json({ message: "Problem created", problem });
     } catch (err) {
         console.error("createProblem error:", err);

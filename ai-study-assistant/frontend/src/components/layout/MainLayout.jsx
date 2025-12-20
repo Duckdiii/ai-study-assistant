@@ -8,7 +8,6 @@ import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip"; //badge nhỏ (role)
 
-// ✅ FIX: từ src/components/layout/MainLayout.jsx -> src/hooks/useAuth.jsx
 import { useAuth } from "../../hooks/useAuth"; //custom hook lấy user hiện tại + hàm logout
 
 export default function MainLayout({ children }) { // children chính là nội dung page con => vd: DashboardPage, ProblemsPage, ...
@@ -39,11 +38,20 @@ export default function MainLayout({ children }) { // children chính là nội 
             Problems
           </Button>
 
-          {/* ✅ Role-based menu (admin only) */}
+          <Button color="inherit" component={Link} to="/chat">
+            Chat
+          </Button>
+
+          {/*Role-based menu (admin only) */}
           {isAdmin && (
-            <Button color="inherit" component={Link} to="/analytics/overview">
-              Analytics
-            </Button>
+            <>
+              <Button color="inherit" component={Link} to="/analytics/overview">
+                Analytics
+              </Button>
+              <Button color="inherit" component={Link} to="/admin/users">
+                Users
+              </Button>
+            </>
           )}
 
           {/* Right side */}

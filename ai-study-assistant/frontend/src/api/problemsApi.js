@@ -4,7 +4,7 @@ import apiClient from "./apiClient";
 export const getProblems = (params) => apiClient.get("/problems", { params });
 export const createProblem = (data) => apiClient.post("/problems", data);
 export const getProblemById = (id) => apiClient.get(`/problems/${id}`);
-export const updateProblem = (id, data) => apiClient.patch(`/problems/${id}`, data);
+export const updateProblem = (id, data) => apiClient.put(`/problems/${id}`, data);
 
 // notes (nếu backend bạn có routes này; nếu chưa có thì bạn comment lại)
 export const getNotes = (problemId) => apiClient.get(`/problems/${problemId}/notes`);
@@ -31,4 +31,4 @@ export const uploadProblemFiles = (problemId, filelist) => {
 export const downloadFile = (fileId) =>
     apiClient.get(`/files/download/${fileId}`, { responseType: "blob" });
 
-export const getFileMeta = (fileId) => apiClient.get(`/files/${fileId}`);
+export const getFileMeta = (fileId) => apiClient.get(`/files/${fileId}`); //trả về thông tin như: tên file, size, type, url, createdAt…

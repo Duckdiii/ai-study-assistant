@@ -2,10 +2,18 @@ import { solveProblem, summarizeText } from "../services/ai.service.js";
 
 export async function solveProblemHandler(req, res) {
     try {
+        const io = req.app.get("io");
         const userId = req.user.id;
         const { problemId, text } = req.body;
 
         const { answer, logId } = await solveProblem({ userId, problemId, text });
+
+        if (io) {
+            io.to(`user:${req.user.id}`).emit("notification:aiDone", {
+                problemId,
+                preview: answer.slice(0, 80),
+            });
+        }
 
         res.json({
             message: "AI solved problem successfully",

@@ -24,3 +24,14 @@ Phần	Ý nghĩa
 parts[0]	Header
 parts[1]	Payload (thông tin user)
 parts[2]	Signature
+
+
+vài trường hợp phổ biến khiến fetchMeIfAvailable không lấy được user:
+
+Token hết hạn hoặc không hợp lệ → API trả 401.
+Token bị thu hồi / user bị disable.
+Mạng lỗi hoặc backend down → request fail/timeout.
+CORS hoặc cấu hình API sai → request bị chặn.
+apiClient không gửi token (ví dụ interceptor bị lỗi).
+Backend đổi format response (không có user) → frontend không parse được.
+OAuth vừa xong nhưng user chưa được tạo/đồng bộ → backend trả rỗng.

@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 import prisma from "../config/prisma.js";
 import { signAccessToken } from "../utils/jwt.js";
 
-const SALT_ROUNDS = 10;
+const SALT_ROUNDS = 10; //số vòng salt khi hash mật khẩu bằng bcrypt
 
 export async function registerUser({ email, password, name }) {
     // Kiểm tra email đã tồn tại chưa
@@ -24,7 +24,7 @@ export async function registerUser({ email, password, name }) {
         },
     });
 
-    // Tạo token luôn sau khi đăng ký (cho tiện)
+    // Tạo token
     const accessToken = signAccessToken({
         userId: user.id,
         role: user.role,
@@ -45,6 +45,7 @@ export async function loginUser({ email, password }) {
         throw new Error("Invalid email or password");
     }
 
+    // Tạo token
     const accessToken = signAccessToken({
         userId: user.id,
         role: user.role,

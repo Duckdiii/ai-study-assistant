@@ -13,7 +13,7 @@ export async function createProblem(userId, data) {
             title,
             content,
             subject,
-            difficulty, // "EASY" | "MEDIUM" | "HARD" (nếu bạn dùng enum)
+            difficulty, // "EASY" | "MEDIUM" | "HARD"
             ownerId: userId,
         },
     });
@@ -46,7 +46,7 @@ export async function listProblems(user, query) {
 
     if (q) {
         where.OR = [
-            { title: { contains: q, mode: "insensitive" } },
+            { title: { contains: q, mode: "insensitive" } }, // tìm không phân biệt hoa/thường
             { content: { contains: q, mode: "insensitive" } },
         ];
     }
@@ -64,15 +64,11 @@ export async function listProblems(user, query) {
     }
 
     function parseSort(sort) {
-        // sort ví dụ: "createdAt:desc" hoặc "title:asc"
         if (!sort) return { createdAt: "desc" };
 
         const [field, dir] = String(sort).split(":");
 
-        // whitelist field để tránh lỗi + tránh user truyền bậy
-        const safeField = ["createdAt", "title", "status", "subject"].includes(field)
-            ? field
-            : "createdAt";
+        const safeField = ["createdAt", "title", "status", "subject"].includes(field) ? field : "createdAt";
 
         const safeDir = dir === "asc" ? "asc" : "desc";
 
@@ -102,6 +98,7 @@ export async function listProblems(user, query) {
 export async function getProblemById(id, user) {
     const problem = await prisma.problem.findUnique({
         where: { id: Number(id) },
+        include: { files: true },
     });
 
     if (!problem) return null;

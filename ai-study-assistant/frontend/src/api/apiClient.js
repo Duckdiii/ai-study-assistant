@@ -1,6 +1,4 @@
 import axios from "axios";
-
-// Nếu bạn có .env của Vite: VITE_API_URL=http://localhost:4000
 const baseURL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 const apiClient = axios.create({
@@ -10,8 +8,9 @@ const apiClient = axios.create({
 
 const TOKEN_KEY = "accessToken";
 
-// Request interceptor: tự gắn Bearer token
+//Nó chạy trước mỗi request đi ra -> tự động gắn token vào mọi request
 apiClient.interceptors.request.use((config) => {
+  //Trước mỗi request, lấy token từ localStorag
   const token = localStorage.getItem(TOKEN_KEY);
   if (token) {
     config.headers = config.headers || {};
@@ -20,19 +19,18 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor: log lỗi + optional auto logout nếu 401
+//Nó chạy sau khi nhận response từ server
 apiClient.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    const msg =
+  (res) => res, //response thành công (status 2xx) 
+  (err) => { //có lỗi (4xx/5xx)
+    const msg = // message lỗi từ response hoặc message chung
       err?.response?.data?.message || err?.message || "Unknown API error";
     console.error("API Error:", msg);
 
-    if (err?.response?.status === 401) {
+    if (err?.response?.status === 401) { //unauthorized
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem("authUser");
-      // nếu muốn auto về login:
-      // window.location.href = "/login";
+      window.location.href = "/login";
     }
 
     return Promise.reject(err);

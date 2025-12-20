@@ -53,7 +53,10 @@ function ProblemCard({ p }) {
 }
 
 export default function ProblemsListPage() {
+
   const [q, setQ] = useState(""); // search query
+  //q là giá trị hiện tại của ô search (query), ban đầu là chuỗi rỗng "".
+  //setQ là hàm để cập nhật q khi người dùng gõ vào ô tìm kiếm.
   const [subject, setSubject] = useState("all"); // filter subject
   const [status, setStatus] = useState("all");// filter status
   const [sort, setSort] = useState("createdAt:desc"); // sort order
@@ -70,9 +73,10 @@ export default function ProblemsListPage() {
   const [content, setContent] = useState(""); // new problem content
   const [newSubject, setNewSubject] = useState("General"); // new problem subject
 
+  //Dùng để lấy danh sách (search, lọc, trang, sort)
   const params = useMemo(() => { //giúp ghi nhớ kết quả, Chỉ khi deps thay đổi thì mới tính lại
     const p = {
-      q: q || undefined,
+      q: q || undefined, //q = query
       subject: subject === "all" ? undefined : subject,
       status: status === "all" ? undefined : status,
       page,
@@ -80,20 +84,23 @@ export default function ProblemsListPage() {
       sort,
     };
     return p;
-  }, [q, subject, status, page, pageSize, sort]);
+  }, [q, subject, status, page, pageSize, sort]); //chỉ khi một trong các deps thay đổi thì mới tính lại params
 
+  //Dùng để load danh sách problems
   const load = async () => {
-    setErr("");
+    setErr(""); // reset lỗi
     try {
-      const res = await getProblems(params);
+      const res = await getProblems(params); // lấy params ở trên
 
+      //Nếu API trả về mảng trực tiếp
       const data = res.data;
       if (Array.isArray(data)) {
         setItems(data);
         setTotalPages(1);
         return;
       }
-
+      
+      //Nếu API trả về object có phân trang
       setItems(data.items || []);
       setTotalPages(data.totalPages || Math.ceil((data.total || 0) / pageSize) || 1);
     } catch (e) {
@@ -103,18 +110,18 @@ export default function ProblemsListPage() {
 
   useEffect(() => {
     load();
-  }, [params]);
+  }, [params]); //Mỗi khi params thay đổi (search/filter/page/sort), nó gọi load() để lấy lại danh sách mới.
 
   const onCreate = async () => {
-    setErr("");
-    if (!title.trim()) {
+    setErr(""); // reset lỗi
+    if (!title.trim()) { //Nếu title rỗng → báo lỗi và dừng
       setErr("Title is required");
       return;
     }
     try {
       await createProblem({ title: title.trim(), content, subject: newSubject });
-      setOpen(false);
-      setTitle("");
+      setOpen(false); //đóng dialog “New problem”
+      setTitle(""); // xóa title, content, subject đã nhập
       setContent("");
       setNewSubject("General");
       setPage(1);

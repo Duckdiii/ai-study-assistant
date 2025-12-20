@@ -8,8 +8,7 @@ import {
 
 const router = Router();
 
-// tất cả analytics đều yêu cầu login
-router.use(authMiddleware);
+router.use(authMiddleware);//Mọi route bên dưới bắt buộc đăng nhập
 
 // Admin overview
 router.get(

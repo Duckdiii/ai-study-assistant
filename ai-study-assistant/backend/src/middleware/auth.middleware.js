@@ -10,13 +10,13 @@ router.post("/register", register);
 router.post("/login", loginLimiter, login);
 
 export function authMiddleware(req, res, next) {
-    const authHeader = req.headers.authorization;
+    const authHeader = req.headers.authorization; //Lấy header Authorization
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
         return res.status(401).json({ message: "Missing or invalid Authorization header" });
     }
 
-    const token = authHeader.split(" ")[1];
+    const token = authHeader.split(" ")[1]; //Tách token: Bearer <token>
 
     try {
         const payload = jwt.verify(token, JWT_SECRET);

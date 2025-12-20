@@ -7,12 +7,12 @@ function sevenDaysAgo() {
     return d;
 }
 
-// ===== OVERVIEW (cho admin) =====
+//overview cho admin
 export async function getOverviewAnalytics() {
-    // 1. Tổng số problem
+    //Tổng số problem
     const totalProblems = await prisma.problem.count();
 
-    // 2. Số problem solved vs pending
+    //Số problem solved vs pending
     const solvedCount = await prisma.problem.count({
         where: { status: "SOLVED" },
     });
@@ -20,18 +20,18 @@ export async function getOverviewAnalytics() {
         where: { status: "PENDING" },
     });
 
-    // 3. Số problem theo subject
-    const problemsBySubjectRaw = await prisma.problem.groupBy({
+    //Số problem theo subject
+    const problemsBySubjectRaw = await prisma.problem.groupBy({ //groupBy trả về dữ liệu theo format riêng
         by: ["subject"],
-        _count: { _all: true },
+        _count: { _all: true }, //Đếm tổng số record mỗi group
     });
 
-    const problemsBySubject = problemsBySubjectRaw.map((row) => ({
+    const problemsBySubject = problemsBySubjectRaw.map((row) => ({ //chuyển về format dễ dùng hơn
         subject: row.subject,
         count: row._count._all,
     }));
 
-    // 4. Số lần gọi AI trong 7 ngày gần nhất
+    //Số lần gọi AI trong 7 ngày gần nhất
     const aiCallsLast7Days = await prisma.aiInteraction.count({
         where: {
             createdAt: {
@@ -49,14 +49,14 @@ export async function getOverviewAnalytics() {
     };
 }
 
-// ===== THỐNG KÊ RIÊNG CHO USER =====
+//user
 export async function getUserAnalytics(userId) {
-    // 1. Tổng số problem của user
+    //Tổng số problem của user
     const totalProblems = await prisma.problem.count({
         where: { ownerId: userId },
     });
 
-    // 2. SOLVED vs PENDING
+    // SOLVED vs PENDING
     const solvedCount = await prisma.problem.count({
         where: { ownerId: userId, status: "SOLVED" },
     });
@@ -64,7 +64,7 @@ export async function getUserAnalytics(userId) {
         where: { ownerId: userId, status: "PENDING" },
     });
 
-    // 3. Problem theo subject của user
+    //Problem theo subject của user
     const problemsBySubjectRaw = await prisma.problem.groupBy({
         by: ["subject"],
         where: { ownerId: userId },
@@ -76,7 +76,7 @@ export async function getUserAnalytics(userId) {
         count: row._count._all,
     }));
 
-    // 4. Số lần gọi AI 7 ngày gần nhất của user
+    //Số lần gọi AI 7 ngày gần nhất của user
     const aiCallsLast7Days = await prisma.aiInteraction.count({
         where: {
             userId,

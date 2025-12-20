@@ -3,7 +3,7 @@ import { useAuth } from "../hooks/useAuth";
 
 export default function RequireAuth({ children }) {
   const { user, booting } = useAuth();
-  const location = useLocation();
+  const location = useLocation(); // lấy vị trí hiện tại để lưu lại, phục vụ redirect quay về sau khi login.
 
   // Đợi auth “khởi động xong”
   if (booting) return <div style={{ padding: 20 }}>Loading...</div>;

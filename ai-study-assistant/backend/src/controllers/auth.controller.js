@@ -1,15 +1,22 @@
 import { loginUser, registerUser } from "../services/auth.service.js";
+import prisma from "../config/prisma.js";
 
 export async function authMeHandler(req, res) {
-    // authMiddleware đã verify JWT và gán req.user
-    return res.json({
-        user: {
-            id: req.user.id,
-            email: req.user.email,
-            name: req.user.name,
-            role: req.user.role,
-        },
-    });
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: req.user.id },
+            select: { id: true, email: true, name: true, role: true },
+        });
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        return res.json({ user });
+    } catch (err) {
+        console.error("authMe error:", err);
+        return res.status(500).json({ message: "Internal server error" });
+    }
 }
 
 export async function register(req, res) {

@@ -3,9 +3,9 @@ import { signAccessToken } from "../utils/jwt.js";
 
 // Lấy thông tin user từ token của Google
 async function fetchGoogleUser(accessToken) {
-    const res = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
+    const res = await fetch("https://openidconnect.googleapis.com/v1/userinfo", { //gọi endpoint Google OpenID userinfo
         headers: {
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${accessToken}`, //Gửi header Authorization chứng minh đã login Google
         },
     });
 
@@ -16,10 +16,10 @@ async function fetchGoogleUser(accessToken) {
     return res.json(); // { sub, email, name, picture, ... }
 }
 
-// Đổi code -> access_token + id_token
+// đổi “authorization code” thành token
 async function exchangeCodeForTokens(code) {
-    const body = new URLSearchParams({
-        code,
+    const body = new URLSearchParams({ //làm việc với các tham số trên URL (Query String)
+        code, 
         client_id: process.env.GOOGLE_CLIENT_ID,
         client_secret: process.env.GOOGLE_CLIENT_SECRET,
         redirect_uri: process.env.GOOGLE_REDIRECT_URI,
@@ -43,11 +43,11 @@ async function exchangeCodeForTokens(code) {
 }
 // findOrCreate user dựa trên Google account
 export async function handleGoogleLogin(code) {
-    // 1. Đổi code -> access token
+    //Đổi code -> access token
     const tokenResponse = await exchangeCodeForTokens(code);
     const accessToken = tokenResponse.access_token;
 
-    // 2. Lấy thông tin user
+    //Lấy thông tin user
     const googleUser = await fetchGoogleUser(accessToken);
     const { sub: googleId, email, name } = googleUser;
 
@@ -55,7 +55,7 @@ export async function handleGoogleLogin(code) {
         throw new Error("Google account has no email");
     }
 
-    // 3. Tìm OAuthAccount trước
+    //Tìm OAuthAccount trước
     let oauth = await prisma.oAuthAccount.findUnique({
         where: {
             provider_providerUserId: {
@@ -80,7 +80,6 @@ export async function handleGoogleLogin(code) {
                 data: {
                     email,
                     name: name || "Google User",
-                    // password để null (login bằng Google)
                 },
             });
         }
@@ -96,7 +95,7 @@ export async function handleGoogleLogin(code) {
         });
     }
 
-    // 4. Generate JWT giống login thường
+    //Generate JWT giống login thường
     const jwtToken = signAccessToken({
         userId: user.id,
         role: user.role,

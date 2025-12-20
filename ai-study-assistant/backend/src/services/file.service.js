@@ -17,11 +17,11 @@ export async function attachFilesToProblem({ problemId, user, files }) {
     // Tạo record File cho từng file upload
     const records = await Promise.all(
         files.map((f) =>
-            prisma.file.create({
+            prisma.file.create({ //lưu metadata của nhiều file vào DB
                 data: {
                     filename: f.originalname,
                     path: f.path, // đường dẫn trên server
-                    mimeType: f.mimetype,
+                    mimeType: f.mimetype, // loại file
                     size: f.size,
                     problemId: problem.id,
                 },
