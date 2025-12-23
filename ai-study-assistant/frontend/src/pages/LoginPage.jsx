@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import {
   Box,
@@ -11,6 +11,7 @@ import {
   Stack,
   Divider,
   Alert,
+  Link,
 } from "@mui/material";
 
 export default function LoginPage() {
@@ -53,7 +54,10 @@ export default function LoginPage() {
           <Stack spacing={2}>
             <Typography variant="h5">Login</Typography>
             <Typography variant="body2" color="text.secondary">
-              Login thường (JWT) hoặc Google OAuth2.
+              New here?{" "}
+              <Link component={RouterLink} to="/register">
+                Create an account
+              </Link>
             </Typography>
 
             {err && <Alert severity="error">{err}</Alert>}
@@ -88,9 +92,6 @@ export default function LoginPage() {
                 <Button variant="outlined" onClick={startGoogleLogin}>
                   Continue with Google
                 </Button>
-                <Typography variant="caption" color="text.secondary">
-                  Nếu login Google xong, backend sẽ redirect về đây kèm token.
-                </Typography>
               </Stack>
             </Stack>
           </Stack>

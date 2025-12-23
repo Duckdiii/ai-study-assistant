@@ -33,6 +33,9 @@ export default function LandingPage() {
               <Button component={RouterLink} to="/login" variant="contained">
                 Login
               </Button>
+              <Button component={RouterLink} to="/register" variant="outlined">
+                Register
+              </Button>
               <Button component={RouterLink} to="/problems" variant="outlined">
                 View problems
               </Button>

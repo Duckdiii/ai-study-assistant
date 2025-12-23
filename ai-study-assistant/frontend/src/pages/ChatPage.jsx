@@ -149,9 +149,6 @@ export default function ChatPage() {
               Join room
             </Button>
           </Stack>
-          <Typography variant="caption" color="text.secondary">
-            Open 2 tabs and join the same room to see realtime messages.
-          </Typography>
         </CardContent>
       </Card>
 

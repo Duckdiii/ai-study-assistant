@@ -3,6 +3,9 @@ import { authMiddleware } from "../middleware/auth.middleware.js";
 import {
     solveProblemHandler,
     summarizeHandler,
+    hintHandler,
+    feedbackHandler,
+    chatHandler,
 } from "../controllers/ai.controller.js";
 import { aiLimiter } from "../middleware/rateLimit.js";
 
@@ -12,5 +15,8 @@ router.use(authMiddleware); //Mọi route bên dưới bắt buộc đăng nhậ
 
 router.post("/solve", solveProblemHandler);
 router.post("/summarize", summarizeHandler);
+router.post("/hint", hintHandler);
+router.post("/feedback", feedbackHandler);
+router.post("/chat", chatHandler);
 
 export default router;

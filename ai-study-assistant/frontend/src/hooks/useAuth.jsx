@@ -114,12 +114,8 @@ export function AuthProvider({ children }) {
       console.error("socket error:", e.message);
     });
 
-    s.on("notification:newProblem", (payload) => {
-      console.log("NEW PROBLEM:", payload);
-    });
-
     s.on("message:new", (payload) => {
-      console.log("💬 NEW MESSAGE:", payload);
+      console.log("NEW MESSAGE:", payload);
     });
 
     socketRef.current = s;
@@ -139,6 +135,22 @@ export function AuthProvider({ children }) {
     writeStoredUser(u); //Lưu user vào localStorage
     setUser(u); //cập nhật state đăng nhập
     connectSocket(accessToken); //mở socket realtime
+    return u;
+  };
+
+  const register = async (name, email, password) => {
+    const res = await apiClient.post("/auth/register", { name, email, password });
+    const accessToken = res.data?.accessToken;
+    const u = res.data?.user;
+
+    if (!accessToken || !u) {
+      throw new Error("Invalid register response: missing accessToken or user");
+    }
+
+    localStorage.setItem(TOKEN_KEY, accessToken);
+    writeStoredUser(u);
+    setUser(u);
+    connectSocket(accessToken);
     return u;
   };
 
@@ -177,8 +189,17 @@ export function AuthProvider({ children }) {
     return fallbackUser;
   };
 
-  const value = useMemo( // lưu các giá trị và hàm liên quan đến auth
-    () => ({ user, booting, socket, login, logout, startGoogleLogin, completeOAuthLogin }),
+  const value = useMemo( //
+    () => ({
+      user,
+      booting,
+      socket,
+      login,
+      register,
+      logout,
+      startGoogleLogin,
+      completeOAuthLogin,
+    }),
     [user, booting, socket]
   );
 

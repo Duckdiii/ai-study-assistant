@@ -1,22 +1,53 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AppBar from "@mui/material/AppBar"; //Thanh menu
-import Toolbar from "@mui/material/Toolbar"; //vùng chứa nút
+import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
-import Chip from "@mui/material/Chip"; //badge nhỏ (role)
+import Chip from "@mui/material/Chip"; //badge
+import Badge from "@mui/material/Badge";
+import IconButton from "@mui/material/IconButton";
+import Snackbar from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
+import NotificationsIcon from "@mui/icons-material/Notifications";
 
-import { useAuth } from "../../hooks/useAuth"; //custom hook lấy user hiện tại + hàm logout
+import { useAuth } from "../../hooks/useAuth";
+import { useNotifications } from "../../hooks/useNotifications";
 
 export default function MainLayout({ children }) { // children chính là nội dung page con => vd: DashboardPage, ProblemsPage, ...
   const { user, logout } = useAuth();
+  const { unreadCount, lastNotification, markNotificationsRead } = useNotifications();
   const navigate = useNavigate(); //chuyển trang
+  const [snackOpen, setSnackOpen] = useState(false); //Snackbar đang mở hay đóng
+  const [snack, setSnack] = useState(null); //lưu nội dung thông báo hiện tại
 
-  const handleLogout = () => { // khi user logout => sẽ điều hướng về trang login
+  const handleLogout = () => { // khi user logout => chuyển hướng về trang login
     logout();
     navigate("/login");
+  };
+
+  useEffect(() => {
+    if (!lastNotification) return;
+    setSnack(lastNotification);
+    setSnackOpen(true);
+  }, [lastNotification]);
+
+  const handleSnackClose = (_, reason) => {
+    if (reason === "clickaway") return; //user click ra ngoài snackbar -> thì bỏ qua, không đóng
+    setSnackOpen(false); //Còn lại thì setSnackOpen(false) để đóng Snackbar
+  };
+
+  const handleNotificationsClick = () => { //khi user click vào icon thông báo
+    markNotificationsRead();
+  };
+
+  const handleSnackView = () => { // chức năng cho nút View
+    if (!snack?.link) return;
+    markNotificationsRead();
+    setSnackOpen(false);
+    navigate(snack.link);
   };
 
   const isAdmin = user?.role === "ADMIN";
@@ -55,8 +86,13 @@ export default function MainLayout({ children }) { // children chính là nội 
           )}
 
           {/* Right side */}
-          {user ? ( //khi đã đăng nhập: show email + role + logout
+          {user ? ( //show email + role + logout
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, ml: 2 }}>
+              <IconButton color="inherit" onClick={handleNotificationsClick}>
+                <Badge badgeContent={unreadCount} color="error" max={99}>
+                  <NotificationsIcon />
+                </Badge>
+              </IconButton>
               {/*show role for demo */}
               <Chip
                 size="small"
@@ -70,7 +106,7 @@ export default function MainLayout({ children }) { // children chính là nội 
               </Button>
             </Box>
           ) : (
-            //khi chưa đăng nhập: show nút login
+            //chưa login
             <Button color="inherit" component={Link} to="/login" sx={{ ml: 2 }}>
               Login
             </Button>
@@ -79,6 +115,29 @@ export default function MainLayout({ children }) { // children chính là nội 
       </AppBar>
 
       <Container sx={{ mt: 3 }}>{children}</Container>
+
+      <Snackbar
+        open={snackOpen}
+        autoHideDuration={5000}
+        onClose={handleSnackClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert
+          severity="info"
+          onClose={handleSnackClose}
+          action={
+            snack?.link ? (
+              <Button color="inherit" size="small" onClick={handleSnackView}>
+                View
+              </Button>
+            ) : null
+          }
+          sx={{ width: "100%" }}
+        >
+          <Typography variant="subtitle2">{snack?.title || "Notification"}</Typography>
+          <Typography variant="body2">{snack?.message || ""}</Typography>
+        </Alert>
+      </Snackbar>
     </>
   );
 }

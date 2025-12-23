@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   Stack,
   Typography,
@@ -9,6 +9,7 @@ import {
   Box,
   TextField,
   Button,
+  MenuItem,
   Divider,
   Alert,
   List,
@@ -19,6 +20,10 @@ import {
   addNote,
   aiSolve,
   summarize,
+  aiHint,
+  aiFeedback,
+  aiChat,
+  deleteProblem,
   downloadFile,
   getNotes,
   getProblemById,
@@ -36,19 +41,20 @@ function saveBlob(blob, filename = "download") { // Biến dữ liệu file (Blo
 }
 
 export default function ProblemDetailPage() {
+  const nav = useNavigate();
   const { id } = useParams(); //Lấy id từ URL theo route kiểu /problems/:id
 
   const [p, setP] = useState(null); //Lưu thông tin chi tiết của problem (bài toán)
   const [notes, setNotes] = useState([]); //Danh sách ghi chú của user cho problem này
   const [files, setFiles] = useState([]); //Danh sách file đính kèm
 
-  const [note, setNote] = useState(""); //Nội dung note đang gõ trong form
-  const [ask, setAsk] = useState(""); //Câu hỏi user đang gõ để gửi AI
-  const [aiAnswer, setAiAnswer] = useState(""); //câu trả lời từ AI
+  const [note, setNote] = useState(""); //N?i dung note ?ang g? trong form
 
-  const [sumText, setSumText] = useState("");//Dữ liệu đầu vào để tóm tắt (summary)
-  const [summary, setSummary] = useState("");// Kết quả tóm tắt
-  const [sumBusy, setSumBusy] = useState(false); //Đang chờ API tóm tắt hay không
+  const [aiMode, setAiMode] = useState("solve");
+  const [aiInput, setAiInput] = useState("");
+  const [aiMessages, setAiMessages] = useState([]);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [llmChoice, setLlmChoice] = useState("auto");
 
   const [err, setErr] = useState(""); //Lỗi chung để hiển thị message
   const [busy, setBusy] = useState(false); //Trạng thái đang gọi API (loading chung)
@@ -76,6 +82,40 @@ export default function ProblemDetailPage() {
 
   const statusLabel = useMemo(() => p?.status || "PENDING", [p?.status]);
 
+  const aiModeLabels = {
+    solve: "Solve",
+    hint: "Hint",
+    feedback: "Feedback",
+    chat: "Chat",
+    summarize: "Summarize",
+  };
+
+  const aiModeHelp = {
+    solve: "Solve the problem using its context (optional override text).",
+    hint: "Get a short hint without the full solution.",
+    feedback: "Score and feedback for your answer.",
+    chat: "Chat with AI using the problem context.",
+    summarize: "Summarize text (blank uses problem content + notes).",
+  };
+  const aiPlaceholders = {
+    solve: "Optional: ask to solve or clarify...",
+    hint: "Optional: ask for a hint...",
+    feedback: "Paste your answer to get feedback...",
+    chat: "Ask a question...",
+    summarize: "Paste text to summarize (blank uses problem context)...",
+  };
+
+  const llmOptions = [
+    { value: "gemini|gemini-2.5-flash", label: "Gemini 2.5 Flash (cloud)" },
+    { value: "ollama|qwen3:1.7b", label: "Ollama qwen3:1.7b (local)" },
+  ];
+
+  const parseLlmChoice = (choice) => {
+    if (choice === "auto") return {};
+    const [provider, ...rest] = String(choice).split("|");
+    return { llmProvider: provider, llmModel: rest.join("|") };
+  };
+
   // Thêm note mới vào problem
   const onAddNote = async () => { //Hàm này chạy khi user bấm nút “Add note”
     setErr("");
@@ -90,23 +130,73 @@ export default function ProblemDetailPage() {
   };
 
   // Gửi problem lên AI để giải quyết
-  const onSolve = async () => { //Chạy khi user bấm nút “Solve with AI”
-    setErr("");
-    setBusy(true); //Khóa UI (loading)
-    setAiAnswer(""); //Xóa câu trả lời AI cũ
-    try {
-      const res = await aiSolve({ problemId: Number(id), text: ask || undefined }); //Gửi bài tập / câu hỏi lên AI
-      const answer = res.data?.answer ?? res.data?.result ?? res.data; //Nhận câu trả lời
-      setAiAnswer(answer || ""); //Hiển thị kết quả
 
+  const onAiSend = async () => {
+    const mode = aiMode;
+    const rawText = aiInput.trim();
+    const llmSettings = parseLlmChoice(llmChoice);
+
+    setErr("");
+
+    let requestText = rawText;
+    if (mode === "summarize" && !requestText) {
+      requestText = buildDefaultSummarizeText();
+    }
+
+    if (mode === "feedback" && !requestText) {
+      setErr("Answer text is required for feedback.");
+      return;
+    }
+
+    if (mode === "summarize" && !requestText) {
+      setErr("No content to summarize.");
+      return;
+    }
+
+    if (mode === "chat" && !requestText) return;
+
+    let displayText = requestText;
+    if (!rawText && (mode === "solve" || mode === "hint" || mode === "summarize")) {
+      displayText = "(using problem context)";
+    }
+    if (!displayText) displayText = requestText || "";
+    const userMessage = { role: "user", mode, content: displayText };
+    const historySource = [...aiMessages, userMessage];
+
+    setAiMessages(historySource);
+    setAiInput("");
+    setAiBusy(true);
+
+    try {
+      let res;
+      if (mode === "solve") {
+        res = await aiSolve({ problemId: Number(id), text: rawText || undefined, ...llmSettings });
+      } else if (mode === "hint") {
+        res = await aiHint({ problemId: Number(id), text: rawText || undefined, ...llmSettings });
+      } else if (mode === "feedback") {
+        res = await aiFeedback({ problemId: Number(id), answerText: requestText, ...llmSettings });
+      } else if (mode === "summarize") {
+        res = await summarize({ text: requestText, ...llmSettings });
+      } else {
+        const history = aiMessages
+          .filter((m) => m.mode === "chat")
+          .slice(-6)
+          .map((m) => ({ role: m.role, content: m.content }));
+        res = await aiChat({ problemId: Number(id), message: requestText, history, ...llmSettings });
+      }
+
+      const answer = res.data?.answer ?? res.data?.result ?? res.data;
+      setAiMessages((prev) => [
+        ...prev,
+        { role: "assistant", mode, content: answer || "" },
+      ]);
     } catch (e) {
-      setErr(e?.response?.data?.message || e?.message || "AI solve failed");
+      setErr(e?.response?.data?.message || e?.message || "AI request failed");
     } finally {
-      setBusy(false);
+      setAiBusy(false);
     }
   };
 
-  // ghép nhiều mảnh dữ liệu (title/content/notes) thành 1 đoạn text chuẩn để gửi cho tính năng tóm tắt/AI.
   const buildDefaultSummarizeText = () => {
     const parts = []; // để gom từng khối nội dung
     if (p?.title) parts.push(`Title: ${p.title}`); // thêm khối Title
@@ -121,28 +211,6 @@ export default function ProblemDetailPage() {
   };
 
   // Xử lý tóm tắt nội dung
-  const onSummarize = async () => {
-    setErr(""); // Xóa lỗi cũ (nếu có)
-    setSummary(""); // Xóa kết quả tóm tắt cũ
-    setSumBusy(true); // Đánh dấu đang chờ tóm tắt
-    try {
-      const textToSummarize = (sumText || buildDefaultSummarizeText()).trim(); //Nếu user đã nhập sumText thì dùng; nếu chưa thì tự build từ title/content/notes.
-      if (!textToSummarize) {
-        setErr("Không có nội dung để summarize.");
-        return;
-      }
-
-      const res = await summarize({ text: textToSummarize });
-
-      const out =
-        res.data?.summary ?? res.data?.result ?? res.data?.answer ?? res.data;
-      setSummary(out ? String(out) : ""); //Hiển thị kết quả tóm tắt
-    } catch (e) {
-      setErr(e?.response?.data?.message || e?.message || "Summarize failed");
-    } finally {
-      setSumBusy(false);
-    }
-  };
 
   // Xử lý upload file
   const onUpload = async (e) => { 
@@ -192,6 +260,21 @@ export default function ProblemDetailPage() {
     }
   };
 
+  const onDelete = async () => {
+    setErr("");
+    const ok = window.confirm("Delete this problem? This action cannot be undone.");
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await deleteProblem(id);
+      nav("/problems");
+    } catch (e) {
+      setErr(e?.response?.data?.message || e?.message || "Delete failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (!p) {
     return <Typography color="text.secondary">Loading...</Typography>;
   }
@@ -205,6 +288,9 @@ export default function ProblemDetailPage() {
           <Chip size="small" label={statusLabel} />
           <Button size="small" variant="outlined" onClick={onMarkSolved} disabled={busy}>
             Mark SOLVED
+          </Button>
+          <Button size="small" variant="outlined" color="error" onClick={onDelete} disabled={busy}>
+            Delete
           </Button>
         </Stack>
       </Stack>
@@ -276,77 +362,99 @@ export default function ProblemDetailPage() {
           </List>
         </CardContent>
       </Card>
-
       <Divider />
 
       <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
         <CardContent>
-          <Typography variant="subtitle2">AI Solve</Typography>
-          <Stack spacing={1} sx={{ mt: 1 }}>
-            <TextField
-              label="Optional: override text to solve (nếu muốn)"
-              value={ask}
-              onChange={(e) => setAsk(e.target.value)}
-              multiline
-              minRows={3}
-            />
-            <Button variant="contained" onClick={onSolve} disabled={busy}>
-              {busy ? "Solving..." : "Solve"}
-            </Button>
-
-            {aiAnswer && (
-              <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
-                <CardContent>
-                  <Typography variant="subtitle2">Answer</Typography>
-                  <Typography sx={{ whiteSpace: "pre-wrap", mt: 1 }}>{aiAnswer}</Typography>
-                </CardContent>
-              </Card>
-            )}
-          </Stack>
-        </CardContent>
-      </Card>
-      <Card variant="outlined">
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            AI Summarize
-          </Typography>
-
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            Nhập text dài để tóm tắt. Nếu để trống, hệ thống sẽ tự lấy Content + Notes của problem hiện tại.
-          </Typography>
-
-          <TextField
-            fullWidth
-            multiline
-            minRows={4}
-            value={sumText}
-            onChange={(e) => setSumText(e.target.value)}
-            placeholder="Dán đoạn văn dài vào đây rồi bấm SUMMARIZE..."
-            sx={{ mb: 2 }}
-          />
-
-          <Button variant="contained" onClick={onSummarize} disabled={sumBusy}>
-            {sumBusy ? "SUMMARIZING..." : "SUMMARIZE"}
-          </Button>
-
-          {summary && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="subtitle1">Summary</Typography>
-              <Box
-                sx={{
-                  whiteSpace: "pre-wrap",
-                  bgcolor: "background.default",
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 1,
-                  p: 2,
-                  mt: 1,
-                }}
-              >
-                {summary}
-              </Box>
+          <Stack spacing={1}>
+            <Typography variant="subtitle2">AI Assistant</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {aiModeHelp[aiMode]}
+            </Typography>
+            <Box
+              sx={{
+                mt: 1,
+                maxHeight: 320,
+                overflowY: "auto",
+                p: 1,
+                bgcolor: "background.default",
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 1,
+              }}
+            >
+              <Stack spacing={1}>
+                {aiMessages.length === 0 && (
+                  <Typography variant="body2" color="text.secondary">
+                    No messages yet.
+                  </Typography>
+                )}
+                {aiMessages.map((m, idx) => (
+                  <Box
+                    key={`${m.role}-${idx}`}
+                    sx={{ textAlign: m.role === "user" ? "right" : "left" }}
+                  >
+                    <Typography variant="caption" color="text.secondary">
+                      {m.role === "user" ? "You" : "AI"}
+                      {m.mode ? ` - ${aiModeLabels[m.mode]}` : ""}
+                    </Typography>
+                    <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+                      {m.content}
+                    </Typography>
+                  </Box>
+                ))}
+              </Stack>
             </Box>
-          )}
+            <Stack direction={{ xs: "column", md: "row" }} spacing={1} sx={{ mt: 1 }}>
+              <TextField
+                fullWidth
+                label="Message"
+                placeholder={aiPlaceholders[aiMode]}
+                value={aiInput}
+                onChange={(e) => setAiInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    onAiSend();
+                  }
+                }}
+                multiline
+                minRows={2}
+                disabled={aiBusy}
+              />
+              <TextField
+                select
+                label="Mode"
+                value={aiMode}
+                onChange={(e) => setAiMode(e.target.value)}
+                size="small"
+                sx={{ minWidth: 160 }}
+              >
+                <MenuItem value="solve">Solve</MenuItem>
+                <MenuItem value="hint">Hint</MenuItem>
+                <MenuItem value="feedback">Feedback</MenuItem>
+                <MenuItem value="chat">Chat</MenuItem>
+                <MenuItem value="summarize">Summarize</MenuItem>
+              </TextField>
+              <TextField
+                select
+                label="Model"
+                value={llmChoice}
+                onChange={(e) => setLlmChoice(e.target.value)}
+                size="small"
+                sx={{ minWidth: 220 }}
+              >
+                {llmOptions.map((opt) => (
+                  <MenuItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <Button variant="contained" onClick={onAiSend} disabled={aiBusy}>
+                {aiBusy ? "Working..." : "Send"}
+              </Button>
+            </Stack>
+          </Stack>
         </CardContent>
       </Card>
 

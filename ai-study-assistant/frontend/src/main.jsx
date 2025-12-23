@@ -5,6 +5,7 @@ import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 
 import { AuthProvider } from "./hooks/useAuth";
+import { NotificationsProvider } from "./hooks/useNotifications";
 import { theme } from "./theme";
 import App from "./App.jsx";
 
@@ -14,7 +15,9 @@ createRoot(document.getElementById("root")).render(
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <AuthProvider>
-          <App />
+          <NotificationsProvider>
+            <App />
+          </NotificationsProvider>
         </AuthProvider>
       </ThemeProvider>,
     </BrowserRouter>
