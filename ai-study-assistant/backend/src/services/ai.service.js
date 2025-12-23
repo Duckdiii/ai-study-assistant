@@ -18,7 +18,7 @@ function getGeminiClient() {
 async function callGemini(prompt, modelOverride) {
     const genAI = getGeminiClient();
     const model = genAI.getGenerativeModel({
-        model: modelOverride || process.env.GEMINI_MODEL || modelName,
+        model: modelOverride || modelName,
     });
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -27,7 +27,7 @@ async function callGemini(prompt, modelOverride) {
 
 async function callOllama(prompt, modelOverride) {
     const baseUrl = process.env.OLLAMA_URL || "http://localhost:11434";
-    const model = modelOverride || process.env.OLLAMA_MODEL || defaultOllamaModel;
+    const model = modelOverride || defaultOllamaModel;
 
     const res = await fetch(`${baseUrl}/api/generate`, {
         method: "POST",
